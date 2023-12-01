@@ -1,0 +1,21 @@
+#cloud-config
+autoinstall:
+  version: 1
+  timezone: US/Eastern
+  identity:
+    username: vagrant
+    hostname: vagrant
+    # NOTE use: openssl passwd <password>
+    password: FXGNGsaHOWm/A
+  ssh:
+    install-server: true
+  packages:
+    - openssh-server
+    - linux-tools-azure
+    - linux-tools-common
+    - linux-cloud-tools-azure
+    - linux-cloud-tools-common
+password: vagrant
+chpasswd:
+  expire: false
+ssh_pwauth: true

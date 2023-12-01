@@ -1,0 +1,52 @@
+# Considerations for Operating a Cluster in Prod
+
+## Control Plane
+
+[ ] Autoscaling
+	- [ ] kube-apiserver
+	- [ ] etcd
+	- [ ] DNS service (CoreDNS)
+[ ] Multi-Zone Replication for High Availability
+	- [ ] kube-apiserver
+	- [ ] etcd
+	* Raft consensus algorithm can be used to auto-elect new "leaders" across replicated control plane services
+	* Control plane services can be ran as pods in Kubernetes???
+[ ] Backups for disaster recovery
+	- [ ] etcd
+[ ] Ongoing Maintenance
+	* Plan for upgrading control plane services, worker node services
+	* Plan for managing certificate expirations / renewals
+	* Plan for updating OS-level services on the virtual & physical machine that the worker nodes run on
+
+## Worker Nodes
+	
+[ ] Prepare physical machines to join the cluster as a node
+[ ] Prepare virtual machine images that have all the services and configuration needed to join the cluster as a node
+	* Nodes can register themselves to the cluster's kube-apiserver, or they can be added manually
+	* Most hypervisors can be scripted to spin up new VMs
+[ ] Plan for autoscaling nodes
+	- [ ] Replacing unhealthy nodes
+	- [ ] Grow or shrink the number of nodes based on demand
+[ ] Health checks
+	- [ ] Nodes
+		* Node Problem Detector daemon
+	- [ ] Pods
+[ ] Appropriate namespace limits on memory and CPU
+	* Not sure if this applies to control plane as well or just worker nodes..
+	* Hierarchical namespaces inherit limits
+
+
+## User Management
+
+As a cluster grows to service multiple teams / products, the need for separate user accounts and authentication / authorization becomes apparent.
+
+[ ] Authentication
+	* API server can handle many types of authentication
+	* Plugins can extend it further to support LDAP or kerberos
+[ ] Authorization
+	* Role-Based Access Control
+		* Broadly control access to specific namespaces or the entire cluster
+	* Attribute-Based Access Control
+		* Attached to resources, more granular access
+	* Look into the cluster CA, does this need to be replicated too?
+	* Admission Controllers can handle additional uses of authorization, like webhooks.
