@@ -4,6 +4,10 @@ packer {
       source  = "github.com/hashicorp/hyperv"
       version = "~> 1"
     }
+    vagrant = {
+      source = "github.com/hashicorp/vagrant"
+      version = "~> 1"
+    }
   }
 }
 
@@ -37,6 +41,26 @@ variable "vm_name" {
   default = "ubuntu-jammy"
 }
 
+variable "vm_switch_name" {
+  type = string
+  default = "HyperVLAN"
+}
+
+variable "net_gateway_ipaddr" {
+  type = string
+  default = "172.25.240.1"
+}
+
+variable "net_cidr_mask_bits" {
+  type = string
+  default = "24"
+}
+
+variable "ssh_host" {
+  type = string
+  default = "172.25.240.2"
+}
+
 variable "default_username" {
   type = string
   default = "vagrant"
@@ -44,7 +68,7 @@ variable "default_username" {
 
 variable "default_password" {
   type = string
-  default = "toor1!"
+  default = "vagrant"
 }
 
 source "hyperv-iso" "ubuntujammy" {
@@ -55,16 +79,25 @@ source "hyperv-iso" "ubuntujammy" {
     " autoinstall ds=nocloud;",
     "<F10>",
   ]
-  # NOTE using cd_files requires oscdimg to be on PATH
+  # NOTE using cd_files or cd_content requires oscdimg to be on PATH
   # get it here: https://learn.microsoft.com/en-us/windows-hardware/get-started/adk-install
-  cd_files = [
-    "http/*"
-  ]
+  cd_content = {
+    "meta-data" = file("http/meta-data")
+    "user-data" = templatefile("http/user-data", 
+    {
+      default_username = "${var.default_username}"
+      crypted_password = bcrypt("${var.default_password}")
+      net_gateway_ipaddr = "${var.net_gateway_ipaddr}"
+      net_cidr_mask_bits = "${var.net_cidr_mask_bits}"
+      ssh_host = "${var.ssh_host}"
+    })
+  }
   cd_label = "cidata"
   communicator         = "ssh"
   vm_name              = "${var.vm_name}"
   cpus                 = "${var.vm_cpus}"
   memory               = "${var.vm_memory}"
+  switch_name          = "${var.vm_switch_name}"
   disk_size            = "${var.vm_disk_size}"
   enable_secure_boot   = false
   generation           = 2
@@ -72,6 +105,7 @@ source "hyperv-iso" "ubuntujammy" {
   iso_checksum         = "${var.iso_checksum}"
   iso_url              = "${var.iso_url}"
   shutdown_command     = "echo '${var.default_password}' | sudo -S -E shutdown -P now"
+  ssh_host             = "${var.ssh_host}"
   ssh_username         = "${var.default_username}"
   ssh_password         = "${var.default_password}"
   ssh_timeout          = "30m"
@@ -83,5 +117,9 @@ build {
   sources = [
     "source.hyperv-iso.ubuntujammy",
   ]
+
+  # create a vagrant box file from the image
+  post-processor "vagrant" {
+  }
 
 }

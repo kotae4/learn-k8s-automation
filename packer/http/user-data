@@ -2,20 +2,44 @@
 autoinstall:
   version: 1
   timezone: US/Eastern
-  identity:
-    username: vagrant
-    hostname: vagrant
-    # NOTE use: openssl passwd <password>
-    password: FXGNGsaHOWm/A
   ssh:
+    # TODO install vagrant insecure keypair (https://github.com/hashicorp/vagrant/tree/main/keys)
     install-server: true
+    allow-pw: yes
   packages:
     - openssh-server
     - linux-tools-azure
     - linux-tools-common
     - linux-cloud-tools-azure
     - linux-cloud-tools-common
-password: vagrant
-chpasswd:
-  expire: false
-ssh_pwauth: true
+  network:
+    version: 2
+    ethernets:
+      eth0:
+        dhcp4: false
+        dhcp6: false
+        accept-ra: false
+        link-local: []
+        addresses:
+          - ${ssh_host}/${net_cidr_mask_bits}
+        routes:
+          - to: default
+            via: ${net_gateway_ipaddr}
+        nameservers:
+          addresses:
+            - 1.1.1.2
+            - 1.0.0.2
+  user-data:
+    users:
+    - default
+    - name: ${default_username}
+      # NOTE use: openssl passwd <password>
+      passwd: ${crypted_password}
+      shell: /bin/bash
+      lock_passwd: false
+      sudo: ALL=(ALL) NOPASSWD:ALL
+      groups: users, admin
+    chpasswd:
+      expire: false
+      list:
+      - ubuntu:${crypted_password}
