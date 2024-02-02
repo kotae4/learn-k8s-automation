@@ -195,9 +195,9 @@ $ nc -zvw 3 127.0.0.1 6443
 ### Network Configuration
 
 Ubuntu uses netplan to configure its networking.<br>
-Create a new file in `/etc/netplan` called `my-lan.yaml`:
+Create a new file in `/etc/netplan` called `99-my-lan.yaml`:
 ```bash
-sudo nano /etc/netplan/my-lan.yaml
+sudo nano /etc/netplan/99-my-lan.yaml
 ```
 Add this content to the file:
 ```yaml
@@ -248,6 +248,16 @@ cp3: 172.25.240.22<br>
 worker1: 172.25.240.120<br>
 worker2: 172.25.240.121<br>
 worker3: 172.25.240.122<br>
+
+#### Another annoyance
+
+So it's unclear whether netplan or NetworkManager is the way to go. They seem to fight each other. NetworkManager can be configured with the `nmcli` tool or by writing ini config files to `/etc/NetworkManager/system-connections`.
+
+In some version of Ubuntu, it seems they rewrote part of NetworkManager and netplan to create an ephemeral ini config file that'll be immediately converted to netplan yaml format and stored in `/etc/netplan`. It'll then call netplan generate to re-process all the yaml files which then renders NetworkManager connection profiles to `/run/NetworkManager/system-connections`...
+
+The version of ubuntu here: https://releases.ubuntu.com/22.04.3/ubuntu-22.04.3-live-server-amd64.iso
+
+Uses yet another networking setup. netplan but rendered to systemd-networkd. systemd-networkd can be controlled via `networkctl`. I assume netplan apply / generate will perform the rendering and reloading automatically.
 
 
 ### cgroup Drivers

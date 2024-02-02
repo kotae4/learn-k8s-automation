@@ -118,6 +118,11 @@ build {
     "source.hyperv-iso.ubuntujammy",
   ]
 
+  provisioner "shell" {
+    script = "install-k8s-prereqs.sh"
+    execute_command = "echo '${var.default_password}' | sudo -S bash '{{ .Path }}'"
+  }
+
   # create a vagrant box file from the image
   post-processor "vagrant" {
   }
