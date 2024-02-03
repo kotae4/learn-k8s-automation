@@ -43,12 +43,12 @@ variable "vm_name" {
 
 variable "vm_switch_name" {
   type = string
-  default = "HyperVLAN"
+  default = "VagrantHyperVSwitch"
 }
 
 variable "net_gateway_ipaddr" {
   type = string
-  default = "172.25.240.1"
+  default = "172.25.192.1"
 }
 
 variable "net_cidr_mask_bits" {
@@ -58,7 +58,7 @@ variable "net_cidr_mask_bits" {
 
 variable "ssh_host" {
   type = string
-  default = "172.25.240.2"
+  default = "172.25.192.2"
 }
 
 variable "default_username" {
