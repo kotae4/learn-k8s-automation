@@ -3,3 +3,4 @@ output-*/
 *.iso
 *.box
 .vagrant/
+*.log

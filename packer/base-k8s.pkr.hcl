@@ -72,7 +72,7 @@ variable "default_password" {
 }
 
 source "hyperv-iso" "ubuntujammy" {
-  boot_wait            = "5s"
+  boot_wait            = "15s"
   # NOTE ubuntu >= 20.x now uses cloud-init instead of preseed.
   boot_command         = [
     "e<down><down><down><end>",

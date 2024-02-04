@@ -21,117 +21,141 @@ LB_IP = "172.25.192.200"
 
 
 Vagrant.configure("2") do |config|
-    config.vm.box = "my-base-k8s-box"
-    config.vm.provider "hyperv"
-    config.ssh.password = "vagrant"
-    config.vm.synced_folder ".", "/vagrant", disabled: true
+  config.vm.box = "my-base-k8s-box"
+  config.vm.provider "hyperv"
+  config.ssh.password = "vagrant"
+  config.vm.synced_folder ".", "/vagrant", disabled: true
+  # see: https://github.com/hashicorp/vagrant/issues/7915#issuecomment-298390843
+  # and: https://superuser.com/questions/1354658/hyperv-static-ip-with-vagrant
+  config.vm.network "private_network", bridge: "VagrantHyperVSwitch"
 
-    config.vm.provider "hyperv" do |h|
-      h.ip_address_timeout = 600
-    end
-
-    # ======================================
-    # vagrant-db-dns Machine
-    # Contains a mariadb and bind9 server
-    # not part of the cluster but used by it
-    # ======================================
-    config.vm.define "dbdns" do |dbdns|
-      dbdns.vm.provider "hyperv" do |hv|
-        hv.vmname = "vagrant-db-dns"
-      end
-      dbdns.vm.provision "shell" do |s|
-        s.path = "scripts/vagrant-init-db-dns.sh"
-        s.args = [HOSTS_CIDR, DBDNS_IP, ROUTER_IP, DNS_TRUSTED_NETCIDR, CP1_IP, CP2_IP, CP3_IP, WORKER1_IP, WORKER2_IP, WORKER3_IP, LB_IP, LOCAL_DOMAIN_NAME]
-      end
-    end
-    
-    # ======================================
-    # vagrant-k8s-cp1 Machine
-    # Acts as the first control-plane node
-    # of the highly-available k8s cluster
-    # ======================================
-    config.vm.define "k8s-cp1" do |cp1|
-      cp1.vm.provider "hyperv" do |hv|
-        hv.vmname = "vagrant-k8s-cp1"
-      end
-      cp1.vm.provision "shell" do |s|
-        s.path = "scripts/vagrant-init-controlplane-node.sh"
-        s.args = [HOSTS_CIDR, CP1_IP, ROUTER_IP, DBDNS_IP]
-      end
-    end
-
-    # ======================================
-    # vagrant-k8s-cp2 Machine
-    # Acts as the second control-plane node
-    # of the highly-available k8s cluster
-    # ======================================
-    config.vm.define "k8s-cp2" do |cp2|
-      cp2.vm.provider "hyperv" do |hv|
-        hv.vmname = "vagrant-k8s-cp2"
-      end
-      cp2.vm.provision "shell" do |s|
-        s.path = "scripts/vagrant-init-controlplane-node.sh"
-        s.args = [HOSTS_CIDR, CP2_IP, ROUTER_IP, DBDNS_IP]
-      end
-    end
-
-    # ======================================
-    # vagrant-k8s-cp3 Machine
-    # Acts as the third control-plane node
-    # of the highly-available k8s cluster
-    # ======================================
-    config.vm.define "k8s-cp3" do |cp3|
-      cp3.vm.provider "hyperv" do |hv|
-        hv.vmname = "vagrant-k8s-cp3"
-      end
-      cp3.vm.provision "shell" do |s|
-        s.path = "scripts/vagrant-init-controlplane-node.sh"
-        s.args = [HOSTS_CIDR, CP3_IP, ROUTER_IP, DBDNS_IP]
-      end
-    end
-
-    # ======================================
-    # vagrant-k8s-wk1 Machine
-    # Acts as the first worker node
-    # of the highly-available k8s cluster
-    # ======================================
-    config.vm.define "k8s-wk1" do |wk1|
-      wk1.vm.provider "hyperv" do |hv|
-        hv.vmname = "vagrant-k8s-wk1"
-      end
-      wk1.vm.provision "shell" do |s|
-        s.path = "scripts/vagrant-init-worker-node.sh"
-        s.args = [HOSTS_CIDR, WORKER1_IP, ROUTER_IP, DBDNS_IP]
-      end
-    end
-
-    # ======================================
-    # vagrant-k8s-wk2 Machine
-    # Acts as the second worker node
-    # of the highly-available k8s cluster
-    # ======================================
-    config.vm.define "k8s-wk2" do |wk2|
-      wk2.vm.provider "hyperv" do |hv|
-        hv.vmname = "vagrant-k8s-wk2"
-      end
-      wk2.vm.provision "shell" do |s|
-        s.path = "scripts/vagrant-init-worker-node.sh"
-        s.args = [HOSTS_CIDR, WORKER2_IP, ROUTER_IP, DBDNS_IP]
-      end
-    end
-
-    # ======================================
-    # vagrant-k8s-wk3 Machine
-    # Acts as the third worker node
-    # of the highly-available k8s cluster
-    # ======================================
-    config.vm.define "k8s-wk3" do |wk3|
-      wk3.vm.provider "hyperv" do |hv|
-        hv.vmname = "vagrant-k8s-wk3"
-      end
-      wk3.vm.provision "shell" do |s|
-        s.path = "scripts/vagrant-init-worker-node.sh"
-        s.args = [HOSTS_CIDR, WORKER3_IP, ROUTER_IP, DBDNS_IP]
-      end
-    end
+  config.vm.provider "hyperv" do |h|
+    h.ip_address_timeout = 600
   end
+
+  config.trigger.before :up do |trigger|
+    trigger.info = "Running setup-hyperv-network.ps1 powershell script on host..."
+    trigger.run = {
+      privileged: "true", powershell_elevated_interactive: "true", path: "../setup-hyperv-network.ps1"
+    }
+  end
+
+  # ======================================
+  # vagrant-db-dns Machine
+  # Contains a mariadb and bind9 server
+  # not part of the cluster but used by it
+  # ======================================
+  config.vm.define "dbdns" do |dbdns|
+    dbdns.vm.hostname = "dbdns"
+    dbdns.vm.provider "hyperv" do |hv|
+      hv.vmname = "vagrant-db-dns"
+    end
+    dbdns.vm.provision "shell" do |s|
+      s.path = "scripts/vagrant-init-db-dns.sh"
+      s.args = [HOSTS_CIDR, DBDNS_IP, ROUTER_IP, DNS_TRUSTED_NETCIDR, CP1_IP, CP2_IP, CP3_IP, WORKER1_IP, WORKER2_IP, WORKER3_IP, LB_IP, LOCAL_DOMAIN_NAME]
+    end
+    dbdns.vm.provision "shell", reboot: true
+  end
+  
+  # ======================================
+  # vagrant-k8s-cp1 Machine
+  # Acts as the first control-plane node
+  # of the highly-available k8s cluster
+  # ======================================
+  config.vm.define "k8s-cp1" do |cp1|
+    cp1.vm.hostname = "k8s-cp1"
+    cp1.vm.provider "hyperv" do |hv|
+      hv.vmname = "vagrant-k8s-cp1"
+    end
+    cp1.vm.provision "shell" do |s|
+      s.path = "scripts/vagrant-init-controlplane-node.sh"
+      s.args = [HOSTS_CIDR, CP1_IP, ROUTER_IP, DBDNS_IP]
+    end
+    cp1.vm.provision "shell", reboot: true
+  end
+
+  # ======================================
+  # vagrant-k8s-cp2 Machine
+  # Acts as the second control-plane node
+  # of the highly-available k8s cluster
+  # ======================================
+  config.vm.define "k8s-cp2" do |cp2|
+    cp2.vm.hostname = "k8s-cp2"
+    cp2.vm.provider "hyperv" do |hv|
+      hv.vmname = "vagrant-k8s-cp2"
+    end
+    cp2.vm.provision "shell" do |s|
+      s.path = "scripts/vagrant-init-controlplane-node.sh"
+      s.args = [HOSTS_CIDR, CP2_IP, ROUTER_IP, DBDNS_IP]
+    end
+    cp2.vm.provision "shell", reboot: true
+  end
+
+  # ======================================
+  # vagrant-k8s-cp3 Machine
+  # Acts as the third control-plane node
+  # of the highly-available k8s cluster
+  # ======================================
+  config.vm.define "k8s-cp3" do |cp3|
+    cp3.vm.hostname = "k8s-cp3"
+    cp3.vm.provider "hyperv" do |hv|
+      hv.vmname = "vagrant-k8s-cp3"
+    end
+    cp3.vm.provision "shell" do |s|
+      s.path = "scripts/vagrant-init-controlplane-node.sh"
+      s.args = [HOSTS_CIDR, CP3_IP, ROUTER_IP, DBDNS_IP]
+    end
+    cp3.vm.provision "shell", reboot: true
+  end
+
+  # ======================================
+  # vagrant-k8s-wk1 Machine
+  # Acts as the first worker node
+  # of the highly-available k8s cluster
+  # ======================================
+  config.vm.define "k8s-wk1" do |wk1|
+    wk1.vm.hostname = "k8s-wk1"
+    wk1.vm.provider "hyperv" do |hv|
+      hv.vmname = "vagrant-k8s-wk1"
+    end
+    wk1.vm.provision "shell" do |s|
+      s.path = "scripts/vagrant-init-worker-node.sh"
+      s.args = [HOSTS_CIDR, WORKER1_IP, ROUTER_IP, DBDNS_IP]
+    end
+    wk1.vm.provision "shell", reboot: true
+  end
+
+  # ======================================
+  # vagrant-k8s-wk2 Machine
+  # Acts as the second worker node
+  # of the highly-available k8s cluster
+  # ======================================
+  config.vm.define "k8s-wk2" do |wk2|
+    wk2.vm.hostname = "k8s-wk2"
+    wk2.vm.provider "hyperv" do |hv|
+      hv.vmname = "vagrant-k8s-wk2"
+    end
+    wk2.vm.provision "shell" do |s|
+      s.path = "scripts/vagrant-init-worker-node.sh"
+      s.args = [HOSTS_CIDR, WORKER2_IP, ROUTER_IP, DBDNS_IP]
+    end
+    wk2.vm.provision "shell", reboot: true
+  end
+
+  # ======================================
+  # vagrant-k8s-wk3 Machine
+  # Acts as the third worker node
+  # of the highly-available k8s cluster
+  # ======================================
+  config.vm.define "k8s-wk3" do |wk3|
+    wk3.vm.hostname = "k8s-wk3"
+    wk3.vm.provider "hyperv" do |hv|
+      hv.vmname = "vagrant-k8s-wk3"
+    end
+    wk3.vm.provision "shell" do |s|
+      s.path = "scripts/vagrant-init-worker-node.sh"
+      s.args = [HOSTS_CIDR, WORKER3_IP, ROUTER_IP, DBDNS_IP]
+    end
+    wk3.vm.provision "shell", reboot: true
+  end
+end

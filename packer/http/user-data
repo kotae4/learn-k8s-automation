@@ -12,8 +12,10 @@ autoinstall:
     - openssh-server
     - linux-tools-azure
     - linux-tools-common
+    - linux-tools-generic
     - linux-cloud-tools-azure
     - linux-cloud-tools-common
+    - linux-cloud-tools-generic
     - containerd
     - apt-transport-https
     - ca-certificates

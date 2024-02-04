@@ -13,6 +13,8 @@ dbdnsIp=$4
 # vagrant's hyperv provider does not currently support networking
 # see: https://developer.hashicorp.com/vagrant/docs/providers/hyperv/limitations
 # ==============================================================================
+# delete the subiquity / cloud-init config first
+rm -f /etc/netplan/00-installer-config.yaml
 cat << EOF > /etc/netplan/99-my-lan.yaml
 network:
   version: 2
@@ -33,7 +35,6 @@ network:
           - 1.1.1.2
           - 1.0.0.2
 EOF
-netplan apply
 
 # ========================
 # open the necessary ports
@@ -43,8 +44,3 @@ ufw allow 2379:2380/tcp comment 'etcd server client api'
 ufw allow 10250/tcp comment 'kubelet api'
 ufw allow 10259/tcp comment 'kube-scheduler'
 ufw allow 10257/tcp comment 'kube-controller-manager'
-
-# =================
-# copy the ssh keys
-# =================
-# TODO copy ssh keys

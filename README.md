@@ -29,6 +29,8 @@ This internal virtual network will, by default, occupy `172.25.192.0/24` with th
 
 ### Packer
 
+**MAKE SURE NUMLOCK IS OFF**
+
 Packer is used to build the virtual machine image. The image is based off of the Ubuntu live server image. The core components of a Kubernetes cluster are then installed, and the various tweaks needed to run them are made as well. Finally, the virtual machine image is made into a Vagrant box file.<br>
 The end result is an entirely automated image that's ready to either initialize a cluster as a control-plane node or join an existing cluster as either a control-plane node or a worker node.<br>
 
@@ -42,6 +44,8 @@ packer build ./base-k8s.pkr.hcl
 The output should be named like `packer_ubuntujammy_hyperv_amd64.box`.
 
 ### Vagrant
+
+**IF YOU RUN INTO ERRORS, ALWAYS START BY LOOKING INTO HV-KVP-DAEMON ON THE GUEST**
 
 Vagrant is used to spin up 7 virtual machines through HyperV:
 1. The private DNS and relational database server. This isn't entirely necessary but I like having local domain names and a database for apps to use. Not intended to be part of the cluster.
@@ -57,6 +61,11 @@ cd vagrant
 vagrant box add --name my-base-k8s-box ../packer/packer_ubuntujammy_hyperv_amd64.box
 vagrant init my-base-k8s-box
 vagrant up --provider=hyperv --no-parallel
+```
+
+For debugging:
+```
+vagrant up --provider=hyperv --no-parallel --debug 2>&1 | Tee-Object -FilePath ".\vagrant.log"
 ```
 
 ## Cleanup
