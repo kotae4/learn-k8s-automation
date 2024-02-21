@@ -51,6 +51,7 @@ mkdir /etc/containerd
 containerd config default > /etc/containerd/config.toml
 # add the necessary sections to tell containerd to use the systemd cgroup driver
 sed -i -r 's/(SystemdCgroup.*?=.*?)false/\1true/' /etc/containerd/config.toml
+sed -i -r 's/pause:3.8/pause:3.9/' /etc/containerd/config.toml
 
 #=================
 # kubernetes installation

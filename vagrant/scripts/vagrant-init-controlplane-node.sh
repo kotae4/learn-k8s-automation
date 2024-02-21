@@ -44,3 +44,24 @@ ufw allow 2379:2380/tcp comment 'etcd server client api'
 ufw allow 10250/tcp comment 'kubelet api'
 ufw allow 10259/tcp comment 'kube-scheduler'
 ufw allow 10257/tcp comment 'kube-controller-manager'
+
+# =======================================================
+# Create the kubelet config that's passed to kubeadm init
+# =======================================================
+cat << EOF > ~/kubelet-config.yaml
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: ClusterConfiguration
+kubernetesVersion: 1.28.0
+controlPlaneEndpoint: "lb.local.testapp.private:6443"
+networking:
+  podSubnet: 10.244.0.0/16
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+cgroupDriver: systemd
+failSwapOn: false
+featureGates:
+  NodeSwap: true
+memorySwap:
+  swapBehavior: UnlimitedSwap
+EOF

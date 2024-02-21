@@ -144,10 +144,41 @@ Verify system variables were written properly:
 sysctl net.bridge.bridge-nf-call-iptables net.bridge.bridge-nf-call-ip6tables net.ipv4.ip_forward
 ```
 
+Verify cgroup2fs:
+`stat -fc %T /sys/fs/cgroup/`
+
 ### Swap Configuration
 
 In some cases swap memory should be disabled on each node. Unclear if this is still the case or if this applies to our current setup.<br>
 Swap should be disabled in config files `/etc/fstab` and `systemd.swap`. Look up further instructions specific to distro.
+
+```
+swapoff -a
+rm /swap.img
+sed -i -r 's/\/swap.img/#\/swap.img/' /etc/fstab
+```
+
+Alternatively, pass this config to kubeadm:
+```yaml
+apiVersion: kubeadm.k8s.io/v1beta3
+kind: ClusterConfiguration
+kubernetesVersion: 1.28.0
+controlPlaneEndpoint: "lb.local.testapp.private:6443"
+networking:
+  podSubnet: 10.244.0.0/16
+---
+apiVersion: kubelet.config.k8s.io/v1beta1
+kind: KubeletConfiguration
+cgroupDriver: systemd
+failSwapOn: false
+featureGates:
+  NodeSwap: true
+memorySwap:
+  swapBehavior: UnlimitedSwap
+```
+
+You can generate the default version of this config like so:
+`kubeadm config print init-defaults --component-configs KubeletConfiguration > kubelet-config.yaml`
 
 NOTE this no longer applies, swap memory is fine for this setup.
 
@@ -429,9 +460,19 @@ DNS resolution maps the FQDN to an IP. ARP resolution maps the IP to MAC. Maybe 
 #### kubeadmin init
 `kubeadm init --pod-network-cidr=10.244.0.0/16 --control-plane-endpoint=lb.local.testapp.private:6443 --upload-certs`
 
+With config:
+`kubeadm init --pod-network-cidr=10.244.0.0/16 --control-plane-endpoint=lb.local.testapp.private:6443 --upload-certs --config kubelet-config.yaml`
+
 The `--pod-network-cidr` here just explicitly specifies the pod address. It is the same as the (current) default pod network cidr, but stating it explicitly adds some future-proofing and bug-proofing.<br>
 The `--control-plane-endpoint` is set to the domain name that points at the kube-vip Virtual IP. The port is the default, and is the same as kube-apiserver's default port.<br>
 The `--upload-certs` flag uploads certs that should be shared across all controlplane nodes. If installing certificates manually on each node, you can remove this flag, but it's nice to have kubeadm do this for us.<br>
+
+If errors occur, try checking the kubelet:
+`sudo journalctl -xeu kubelet`
+Check running containers:
+`sudo crictl --runtime-endpoint unix:///var/run/containerd/containerd.sock ps -a | grep kube | grep -v pause`
+Inspect container logs:
+`sudo crictl --runtime-endpoint unix:///var/run/containerd/containerd.sock logs CONTAINERID`
 
 #### Cluster networking
 
@@ -451,6 +492,9 @@ sudo kubeadm join lb.local.testapp.private:6443 --token tokdde.969kzyboywoh95p6 
 ```
 
 The `--control-plane` flag here tells kubeadm that we want this node to be a new controlplane node. The rest of the flags come from the output of the `kubeadm init` command (or we can regenerate the hashes and cert keys at a later time - the output from the kubeadm init command is only good for two hours).
+
+Run this to regen the certs:
+`kubeadm init phase upload-certs --upload-certs`
 
 #### Worker nodes
 Finally, we can join our worker nodes. This is just the output from the `kubeadm init` command, should look like this:

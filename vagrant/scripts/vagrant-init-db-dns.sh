@@ -67,6 +67,15 @@ DELETE FROM mysql.db WHERE Db='test' OR Db='test\\_%';
 FLUSH PRIVILEGES;
 EOS
 ufw allow mysql
+# TODO configure remote user
+# this is so the apiserver - running in the cluster - can operate on the DB
+# without adding an ssh tunnel
+# 1. add 'badmin' user with password 'vagrant'
+# 2. open db server to external connections:
+#   * append [mysqld]\nskip-networking=0\nskip-bind-address to ~/.my.cnf
+# 3. GRANT ALL PRIVILEGES ON *.* TO 'badmin'@'hostIp' 
+#  IDENTIFIED BY 'vagrant' WITH GRANT OPTION;
+#   * use '%' for wildcards in the hostIp... should probably pass it as arg to this script from vagrantfile.
 
 # =====================================
 # install and setup bind9 for local DNS
